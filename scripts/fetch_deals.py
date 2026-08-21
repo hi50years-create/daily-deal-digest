@@ -8,8 +8,14 @@
 
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
-PPOMPPU_LIST_URL = "https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu"
+# 3개 게시판을 같이 긁어옵니다: 핫딜(전체 특가) + 쿠폰(브랜드 공식 쿠폰) + 이벤트
+BOARD_URLS = {
+    "핫딜": "https://www.ppomppu.co.kr/zboard/zboard.php?id=ppomppu",
+    "쿠폰": "https://www.ppomppu.co.kr/zboard/zboard.php?id=coupon",
+    "이벤트": "https://www.ppomppu.co.kr/zboard/zboard.php?id=event2",
+}
 
 # 생활 할인정보로 볼만한 키워드 (제목에 이 중 하나라도 포함되면 후보로 채택)
 # 주의: "무료", "할인", "쿠폰", "특가" 같은 범용 단어는 넣지 않습니다.
@@ -60,27 +66,37 @@ def _parse_recommend_count(row):
     return 0
 
 
-def fetch_recent_posts(limit=60):
-    """뽐뿌 게시판 최신 글 목록을 가져옵니다. (제목/링크/추천수)"""
-    resp = requests.get(PPOMPPU_LIST_URL, headers=HEADERS, timeout=10)
-    resp.encoding = "euc-kr"  # 뽐뿌는 EUC-KR 인코딩을 씁니다
-    soup = BeautifulSoup(resp.text, "html.parser")
+def fetch_recent_posts(per_board_limit=40):
+    """3개 게시판(핫딜/쿠폰/이벤트) 최신 글 목록을 모두 가져옵니다. (제목/링크/추천수/출처게시판)"""
+    all_posts = []
 
-    posts = []
-    # 게시글 행(tr)에서 제목 링크만 추출
-    for row in soup.select("tr.baseList"):
-        title_tag = row.select_one("a.baseList-title")
-        if not title_tag:
+    for board_name, board_url in BOARD_URLS.items():
+        try:
+            resp = requests.get(board_url, headers=HEADERS, timeout=10)
+            resp.encoding = "euc-kr"  # 뽐뿌는 EUC-KR 인코딩을 씁니다
+            soup = BeautifulSoup(resp.text, "html.parser")
+        except requests.RequestException as e:
+            print(f"⚠️ {board_name} 게시판 불러오기 실패: {e}")
             continue
-        title = title_tag.get_text(strip=True)
-        href = title_tag.get("href", "")
-        if href and not href.startswith("http"):
-            href = "https://www.ppomppu.co.kr/zboard/" + href.lstrip("/")
-        recommend = _parse_recommend_count(row)
-        posts.append({"title": title, "link": href, "recommend": recommend})
-        if len(posts) >= limit:
-            break
-    return posts
+
+        count = 0
+        for row in soup.select("tr.baseList"):
+            title_tag = row.select_one("a.baseList-title")
+            if not title_tag:
+                continue
+            title = title_tag.get_text(strip=True)
+            href = title_tag.get("href", "")
+            href = urljoin(board_url, href)  # 상대경로를 안전하게 절대경로로 변환
+            recommend = _parse_recommend_count(row)
+            all_posts.append({
+                "title": title, "link": href,
+                "recommend": recommend, "board": board_name,
+            })
+            count += 1
+            if count >= per_board_limit:
+                break
+
+    return all_posts
 
 
 def filter_lifestyle_deals(posts):

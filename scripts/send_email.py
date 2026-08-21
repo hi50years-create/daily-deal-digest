@@ -26,13 +26,8 @@ def send_email(html_content, subject=None):
     msg["From"] = SMTP_USER
     msg["To"] = RECIPIENT_EMAIL
 
-    # 정리된 재료 노트를 그대로 이메일 본문에 넣음
-    body = f"""
-    <p>오늘의 할인정보 재료예요. 완성된 글이 아니라, 다듬어서 쓸 재료 목록이에요.</p>
-    <hr>
-    {html_content}
-    """
-    msg.attach(MIMEText(body, "html"))
+    # 목록만 그대로 이메일 본문에 넣음 (다른 설명 문구 없음)
+    msg.attach(MIMEText(html_content, "html"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls()
