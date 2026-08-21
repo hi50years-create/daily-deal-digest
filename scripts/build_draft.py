@@ -12,9 +12,10 @@ def build_draft_material(deals):
 
     items_html = ""
     for i, deal in enumerate(deals, 1):
+        rec = deal.get("recommend", 0)
         items_html += f"""
         <li style="margin-bottom:10px;">
-          <b>{deal['title']}</b><br>
+          <b>{deal['title']}</b> <span style="color:#888; font-size:12px;">(추천 {rec})</span><br>
           <a href="{deal['link']}" style="color:#888; font-size:13px;">원문 보기</a>
         </li>
         """
