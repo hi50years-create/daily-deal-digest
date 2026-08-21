@@ -1,0 +1,27 @@
+name: 매일 할인정보 초안 메일 발송
+
+on:
+  schedule:
+    # 매일 한국시간 오전 8시 = UTC 전날 23시
+    - cron: '0 23 * * *'
+  workflow_dispatch: {}  # 수동으로도 실행 가능 (테스트용)
+
+jobs:
+  send-deal-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: 파이프라인 실행
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: python main.py
