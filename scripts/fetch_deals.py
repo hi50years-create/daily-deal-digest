@@ -70,33 +70,43 @@ def _parse_recommend_count(row):
     return 0
 
 
-def fetch_recent_posts(per_board_limit=40):
-    """3개 게시판(핫딜/쿠폰/이벤트) 최신 글 목록을 모두 가져옵니다. (제목/링크/추천수/출처게시판)"""
+def fetch_recent_posts(per_board_limit=150, max_pages=8):
+    """3개 게시판(핫딜/쿠폰/이벤트) 최신 글 목록을 모두 가져옵니다.
+    한 페이지에 보통 20~25개만 있어서, 필요한 개수를 채울 때까지 페이지를 넘겨가며 가져옵니다."""
     all_posts = []
 
     for board_name, board_url in BOARD_URLS.items():
-        try:
-            resp = requests.get(board_url, headers=HEADERS, timeout=10)
-            resp.encoding = "euc-kr"  # 뽐뿌는 EUC-KR 인코딩을 씁니다
-            soup = BeautifulSoup(resp.text, "html.parser")
-        except requests.RequestException as e:
-            print(f"⚠️ {board_name} 게시판 불러오기 실패: {e}")
-            continue
-
         count = 0
-        for row in soup.select("tr.baseList"):
-            title_tag = row.select_one("a.baseList-title")
-            if not title_tag:
-                continue
-            title = title_tag.get_text(strip=True)
-            href = title_tag.get("href", "")
-            href = urljoin(board_url, href)  # 상대경로를 안전하게 절대경로로 변환
-            recommend = _parse_recommend_count(row)
-            all_posts.append({
-                "title": title, "link": href,
-                "recommend": recommend, "board": board_name,
-            })
-            count += 1
+        for page in range(1, max_pages + 1):
+            page_url = f"{board_url}&page={page}"
+            try:
+                resp = requests.get(page_url, headers=HEADERS, timeout=10)
+                resp.encoding = "euc-kr"  # 뽐뿌는 EUC-KR 인코딩을 씁니다
+                soup = BeautifulSoup(resp.text, "html.parser")
+            except requests.RequestException as e:
+                print(f"⚠️ {board_name} 게시판 {page}페이지 불러오기 실패: {e}")
+                break
+
+            rows = soup.select("tr.baseList")
+            if not rows:
+                break  # 더 이상 글이 없으면 다음 게시판으로
+
+            for row in rows:
+                title_tag = row.select_one("a.baseList-title")
+                if not title_tag:
+                    continue
+                title = title_tag.get_text(strip=True)
+                href = title_tag.get("href", "")
+                href = urljoin(board_url, href)
+                recommend = _parse_recommend_count(row)
+                all_posts.append({
+                    "title": title, "link": href,
+                    "recommend": recommend, "board": board_name,
+                })
+                count += 1
+                if count >= per_board_limit:
+                    break
+
             if count >= per_board_limit:
                 break
 
