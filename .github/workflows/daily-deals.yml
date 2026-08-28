@@ -2,8 +2,8 @@ name: 매일 할인정보 초안 메일 발송
 
 on:
   schedule:
-    # 매일 한국시간 오전 8시 = UTC 전날 23시
-    - cron: '0 23 * * *'
+    # 매일 한국시간 오전 10시 = UTC 01시 (KST = UTC+9)
+    - cron: '0 1 * * *'
   workflow_dispatch: {}  # 수동으로도 실행 가능 (테스트용)
 
 permissions:

@@ -103,7 +103,8 @@ python -m scripts.sources.telegram
 
 ## 발행 시간 바꾸기
 
-`.github/workflows/daily-deals.yml`의 `cron: '0 23 * * *'` 수정 (UTC 기준, 한국시간 -9시간).
+`.github/workflows/daily-deals.yml`의 `cron` 수정 (UTC 기준, 한국시간 = UTC+9).
+현재 `0 1 * * *` = 한국시간 오전 10시. 예: 오전 8시로 바꾸려면 `0 23 * * *`.
 
 ## 필터 키워드 조정 (중요)
 
