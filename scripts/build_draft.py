@@ -53,24 +53,6 @@ def _deal_li(deal):
         meta_bits.append(html.escape(deal["discount"]) + " 할인")
     meta = f' <span style="color:#888; font-size:12px;">[{" · ".join(meta_bits)}]</span>' if meta_bits else ""
 
-    # 네이버 쇼핑 최저가 대조 결과 (조회한 커머스 딜만)
-    price_note = ""
-    low = deal.get("lowest_price", 0)
-    pv = deal.get("price_value", 0)
-    if low > 0 and pv > 0:
-        mall = html.escape(deal.get("lowest_mall") or "네이버")
-        if pv <= low:
-            price_note = (
-                f'<br><span style="color:#1a7f37; font-size:12px;">'
-                f"✅ 이 딜이 최저가 수준 (네이버 최저 {low:,}원 · {mall})</span>"
-            )
-        else:
-            gap = round((pv - low) / low * 100)
-            price_note = (
-                f'<br><span style="color:#b34700; font-size:12px;">'
-                f"⚠️ 네이버 최저 {low:,}원 ({mall}) — 이 딜이 약 {gap}% 비쌈</span>"
-            )
-
     if link:
         link_html = f'<a href="{html.escape(link, quote=True)}" style="color:#888; font-size:13px;">원문 보기</a>'
     else:
@@ -85,7 +67,7 @@ def _deal_li(deal):
 
     return (
         f'<li style="margin-bottom:10px;">'
-        f"<b>{title}</b>{meta}{price_note}<br>"
+        f"<b>{title}</b>{meta}<br>"
         f"{link_html}{img}"
         f"</li>"
     )

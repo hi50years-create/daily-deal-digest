@@ -13,12 +13,10 @@ deal 딕셔너리 스키마 (기존 구조를 확장, 하위호환):
       "recommend": int,      # 추천수 (모르면 0)
       "date": datetime.date | None,
       "price": str,          # 가격 표기 (커머스 API만 채움, 없으면 "")
-      "price_value": int,    # 가격 숫자값 (가격 비교용, 모르면 0)
+      "price_value": int,    # 가격 숫자값 (모르면 0)
       "discount": str,       # 할인율 표기 예: "43%" (없으면 "")
       "image": str,          # 썸네일 URL (없으면 "")
       "is_affiliate": bool,  # 제휴 링크 여부 (쿠팡 True)
-      "lowest_price": int,   # 네이버 쇼핑 최저가 (조회했을 때만, 0=미조회)
-      "lowest_mall": str,    # 그 최저가 판매처 이름 (없으면 "")
     }
 """
 
@@ -124,8 +122,6 @@ def make_deal(title, link, source, board="", recommend=0, date=None,
         "discount": discount or "",
         "image": image or "",
         "is_affiliate": bool(is_affiliate),
-        "lowest_price": 0,
-        "lowest_mall": "",
     }
 
 
