@@ -25,9 +25,9 @@ from scripts.sources.common import (
 # 기본으로 켜는 커뮤니티 소스들 (키가 필요 없는 것들)
 SOURCES_DEFAULT = "ppomppu,ruliweb,clien,algumon,telegram"
 
-# 커뮤니티 소스는 소스별 이만큼, 커머스(쿠팡 등)는 별도 상한
+# 커뮤니티 소스는 소스별 이만큼, 커머스(쿠팡 골드박스+키워드검색)는 별도 상한
 COMMUNITY_PER_SOURCE = 8
-COMMERCE_MAX = 8
+COMMERCE_MAX = 16
 
 
 def _enabled_sources():
