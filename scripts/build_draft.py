@@ -10,7 +10,7 @@ import html
 import re
 from urllib.parse import urlparse
 
-from .sources.common import is_coupang_related
+from .sources.common import has_coupang_product
 
 # 커뮤니티 섹션이 나오는 순서. 목록에 없는 소스는 맨 뒤에 이름순으로.
 SECTION_ORDER = ["뽐뿌", "루리웹", "클리앙", "알구몬", "텔레그램"]
@@ -164,8 +164,8 @@ def build_draft_material(deals):
     if not deals:
         return "<p>오늘은 쓸만한 생활 할인정보를 못 찾았어요.</p>"
 
-    coupang_deals = [d for d in deals if is_coupang_related(d)]
-    other_deals = [d for d in deals if not is_coupang_related(d)]
+    coupang_deals = [d for d in deals if has_coupang_product(d)]
+    other_deals = [d for d in deals if not has_coupang_product(d)]
 
     parts = []
 

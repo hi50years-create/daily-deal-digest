@@ -245,17 +245,33 @@ def _keyword_hit(title, keyword):
 _COUPANG_HOSTS = ("coupang.com", "coupa.ng")
 
 
+def _title_mentions_coupang_shop(title):
+    """제목이 쿠팡(쇼핑몰)을 가리키는지. '쿠팡이츠'(배달)·'쿠팡플레이'(OTT)는 제외."""
+    t = title.replace("쿠팡이츠", "").replace("쿠팡플레이", "").replace("쿠팡플렉스", "")
+    return "쿠팡" in t
+
+
+def _url_is_coupang(url):
+    host = urlparse(url or "").netloc.lower()
+    return any(h in host for h in _COUPANG_HOSTS)
+
+
 def is_coupang_related(deal):
-    """쿠팡 상품과 관련된 딜인지 (파트너스 API / 제목에 [쿠팡] / 링크가 쿠팡)."""
+    """딜 페이지를 열어 상품 링크를 찾아볼 가치가 있는지 (넓게 판단).
+    제목이 쿠팡(쇼핑몰)을 언급하거나, 링크가 이미 쿠팡이거나, 파트너스 API 딜."""
     if deal["source"] == "쿠팡":
         return True
-    if "쿠팡" in deal["title"]:
+    if _title_mentions_coupang_shop(deal["title"]):
         return True
-    for url in (deal.get("product_link", ""), deal["link"]):
-        host = urlparse(url).netloc.lower()
-        if any(h in host for h in _COUPANG_HOSTS):
-            return True
-    return False
+    return _url_is_coupang(deal.get("product_link", "")) or _url_is_coupang(deal["link"])
+
+
+def has_coupang_product(deal):
+    """'쿠팡 상품 정리' 템플릿으로 낼 만한지 (좁게 판단).
+    파트너스 API 딜이거나, 실제 쿠팡 상품 페이지 링크를 확보한 경우만."""
+    if deal["source"] == "쿠팡":
+        return True
+    return _url_is_coupang(deal.get("product_link", "")) or _url_is_coupang(deal["link"])
 
 
 def has_excluded(title):
