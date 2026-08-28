@@ -6,6 +6,9 @@ on:
     - cron: '0 23 * * *'
   workflow_dispatch: {}  # 수동으로도 실행 가능 (테스트용)
 
+permissions:
+  contents: read
+
 jobs:
   send-deal-draft:
     runs-on: ubuntu-latest
@@ -24,4 +27,10 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          # 아래는 모두 선택 사항 (없으면 기본값/비활성)
+          SOURCES: ${{ vars.SOURCES }}
+          TELEGRAM_CHANNELS: ${{ vars.TELEGRAM_CHANNELS }}
+          COUPANG_ACCESS_KEY: ${{ secrets.COUPANG_ACCESS_KEY }}
+          COUPANG_SECRET_KEY: ${{ secrets.COUPANG_SECRET_KEY }}
+          COUPANG_KEYWORDS: ${{ vars.COUPANG_KEYWORDS }}
         run: python main.py

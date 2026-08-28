@@ -9,27 +9,28 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ["SMTP_USER"]
-SMTP_PASS = os.environ["SMTP_PASS"]
-RECIPIENT_EMAIL = os.environ["RECIPIENT_EMAIL"]
-
 
 def send_email(html_content, subject=None):
+    # 환경변수는 실제로 보낼 때 읽는다 (DRY_RUN 등에서 import만 해도 되도록).
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ["SMTP_USER"]
+    smtp_pass = os.environ["SMTP_PASS"]
+    recipient = os.environ["RECIPIENT_EMAIL"]
+
     if not subject:
         today = datetime.now().strftime("%Y-%m-%d")
         subject = f"[할인정보 초안] {today}"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = SMTP_USER
-    msg["To"] = RECIPIENT_EMAIL
+    msg["From"] = smtp_user
+    msg["To"] = recipient
 
     # 목록만 그대로 이메일 본문에 넣음 (다른 설명 문구 없음)
     msg.attach(MIMEText(html_content, "html"))
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
+        server.login(smtp_user, smtp_pass)
         server.send_message(msg)
