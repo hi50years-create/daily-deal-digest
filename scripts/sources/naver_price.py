@@ -74,7 +74,12 @@ def lowest_price(title):
             params={"query": query, "display": 20, "sort": "asc"},
             timeout=TIMEOUT,
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            # 네이버는 실패 이유를 본문 errorCode/errorMessage 로 준다
+            print(f"⚠️ 네이버 최저가 조회 실패('{query}'): "
+                  f"HTTP {resp.status_code} {resp.text[:200]}")
+            _cache[query] = None
+            return None
         items = resp.json().get("items", [])
 
         tokens = [t for t in query.split() if len(t) >= 2]
