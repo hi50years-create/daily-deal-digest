@@ -106,6 +106,8 @@ def _resolve_product_links(deals):
           f"{sum(1 for d in targets if d['product_link'])}건")
 
     mapping = coupang.to_deeplinks(coupang_urls)
+    if coupang_urls:
+        print(f"  → 쿠팡 상품링크 {len(coupang_urls)}건 중 제휴 딥링크 변환 {len(mapping)}건")
     for d in targets:
         if d["product_link"] in mapping:
             d["product_link"] = mapping[d["product_link"]]
