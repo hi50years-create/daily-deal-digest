@@ -14,7 +14,7 @@
 import os
 
 from scripts.sources import SOURCE_REGISTRY
-from scripts.sources import aliexpress, coupang
+from scripts.sources import aliexpress, coupang, naver_price
 from scripts.sources.common import (
     cap_per_source,
     dedupe,
@@ -28,6 +28,10 @@ SOURCES_DEFAULT = "ppomppu,ruliweb,clien,algumon,telegram"
 # 커뮤니티 소스는 소스별 이만큼, 커머스(쿠팡 등)는 별도 상한
 COMMUNITY_PER_SOURCE = 6
 COMMERCE_MAX = 8
+
+# 커머스 딜 가격이 네이버 최저가의 이 배수를 넘으면 '특가 아님'으로 보고 제외.
+# 1.15 = 15% 이상 비싸면 버림 (검색 오매칭 여지를 감안해 여유를 둠).
+MARKET_PRICE_TOLERANCE = 1.15
 
 
 def _enabled_sources():
@@ -60,12 +64,33 @@ def _collect_raw():
     return raw
 
 
+def _drop_overpriced(deals):
+    """네이버 최저가가 확인된 커머스 딜 중, 그 최저가보다 너무 비싼 건 제외한다.
+    ('골드박스 특가'라고 이름만 붙고 실제론 다른 데가 더 싼 경우 걸러냄)"""
+    kept = []
+    for d in deals:
+        low = d.get("lowest_price", 0)
+        price = d.get("price_value", 0)
+        if low > 0 and price > 0 and price > low * MARKET_PRICE_TOLERANCE:
+            print(
+                f"  · 제외(특가 아님): {d['title'][:40]} "
+                f"— 쿠팡 {price:,}원 > 네이버 최저 {low:,}원"
+            )
+            continue
+        kept.append(d)
+    return kept
+
+
 def get_today_deals(per_source_max=COMMUNITY_PER_SOURCE):
     raw = _collect_raw()
     deals = dedupe(raw)
 
     community = filter_lifestyle_deals([d for d in deals if not d["is_affiliate"]])
     commerce = exclude_electronics([d for d in deals if d["is_affiliate"]])
+
+    # 커머스 딜은 네이버 쇼핑 최저가와 대조 (키 없으면 그대로 통과)
+    commerce = naver_price.enrich(commerce)
+    commerce = _drop_overpriced(commerce)
 
     result = cap_per_source(community, per_source_max) + cap_per_source(commerce, COMMERCE_MAX)
     return result

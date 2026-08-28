@@ -78,10 +78,11 @@ def _rows(payload):
 
 def _to_deal(row, board):
     price = row.get("productPrice")
-    price_str = f"{price:,}원" if isinstance(price, (int, float)) else ""
+    has_price = isinstance(price, (int, float))
+    price_str = f"{int(price):,}원" if has_price else ""
     base = row.get("basePrice")
     discount = ""
-    if isinstance(base, (int, float)) and isinstance(price, (int, float)) and base > price:
+    if isinstance(base, (int, float)) and has_price and base > price:
         discount = f"{round((base - price) / base * 100)}%"
     return make_deal(
         title=row.get("productName", ""),
@@ -89,6 +90,7 @@ def _to_deal(row, board):
         source="쿠팡",
         board=board,
         price=price_str,
+        price_value=int(price) if has_price else 0,
         discount=discount,
         image=row.get("productImage", ""),
         is_affiliate=True,
