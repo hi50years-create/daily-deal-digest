@@ -19,6 +19,7 @@ deal 딕셔너리 스키마 (기존 구조를 확장, 하위호환):
       "is_affiliate": bool,  # 제휴 링크 여부 (쿠팡 True)
       "category": str,       # 카테고리명 (커머스 API가 줄 때만, 없으면 "")
       "shipping": str,       # 배송 표기 예: "로켓배송·무료배송" (없으면 "")
+      "product_link": str,   # 실제 상품 페이지 URL (딜 페이지에서 추출했을 때만)
     }
 """
 
@@ -111,7 +112,7 @@ EXCLUDE_KEYWORDS = [
 
 def make_deal(title, link, source, board="", recommend=0, date=None,
               price="", price_value=0, discount="", image="", is_affiliate=False,
-              category="", shipping=""):
+              category="", shipping="", product_link=""):
     """deal 딕셔너리를 기본값을 채워서 만든다. 모든 소스는 이걸 통해 딜을 생성한다."""
     return {
         "title": (title or "").strip(),
@@ -127,6 +128,7 @@ def make_deal(title, link, source, board="", recommend=0, date=None,
         "is_affiliate": bool(is_affiliate),
         "category": category or "",
         "shipping": shipping or "",
+        "product_link": product_link or "",
     }
 
 
@@ -238,6 +240,22 @@ def _keyword_hit(title, keyword):
     if re.fullmatch(r"[A-Za-z0-9]+", keyword):
         return re.search(rf"(?<![A-Za-z0-9]){re.escape(keyword)}(?![A-Za-z0-9])", title) is not None
     return keyword in title
+
+
+_COUPANG_HOSTS = ("coupang.com", "coupa.ng")
+
+
+def is_coupang_related(deal):
+    """쿠팡 상품과 관련된 딜인지 (파트너스 API / 제목에 [쿠팡] / 링크가 쿠팡)."""
+    if deal["source"] == "쿠팡":
+        return True
+    if "쿠팡" in deal["title"]:
+        return True
+    for url in (deal.get("product_link", ""), deal["link"]):
+        host = urlparse(url).netloc.lower()
+        if any(h in host for h in _COUPANG_HOSTS):
+            return True
+    return False
 
 
 def has_excluded(title):

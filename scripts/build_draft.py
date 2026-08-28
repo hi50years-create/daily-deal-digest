@@ -10,10 +10,10 @@ import html
 import re
 from urllib.parse import urlparse
 
+from .sources.common import is_coupang_related
+
 # 커뮤니티 섹션이 나오는 순서. 목록에 없는 소스는 맨 뒤에 이름순으로.
 SECTION_ORDER = ["뽐뿌", "루리웹", "클리앙", "알구몬", "텔레그램"]
-
-_COUPANG_HOSTS = ("coupang.com", "coupa.ng")
 
 # 쿠팡 템플릿에서 API로 못 채우는(=Claude가 채울) 항목
 _COUPANG_FILL = [
@@ -41,15 +41,6 @@ AFFILIATE_NOTE = (
 )
 
 
-def _is_coupang(deal):
-    if deal["source"] == "쿠팡":
-        return True
-    if "쿠팡" in deal["title"]:
-        return True
-    host = urlparse(deal["link"]).netloc.lower()
-    return any(h in host for h in _COUPANG_HOSTS)
-
-
 def _clean_product_name(title):
     """'[쿠팡] 농심 라뽁구리 큰사발면 105g 3개 (3,660원/무료)' → '농심 라뽁구리 큰사발면 105g 3개'"""
     t = _LEAD_TAG_RE.sub("", title)
@@ -61,6 +52,10 @@ def _coupang_fields(deal):
     """쿠팡 템플릿에 넣을 값들을 뽑는다.
     파트너스 API로 온 것(source=쿠팡)은 필드가 이미 채워져 있고,
     커뮤니티/텔레그램 딜은 제목에서 상품명·가격·배송을 추정한다."""
+    # 링크: 딜 페이지에서 뽑아낸 실제 상품 링크가 있으면 그걸, 없으면 원문 링크
+    link = deal["product_link"] or deal["link"]
+    has_product = bool(deal["product_link"])
+
     if deal["source"] == "쿠팡":
         return {
             "name": deal["title"],
@@ -68,7 +63,8 @@ def _coupang_fields(deal):
             "price": deal["price"],
             "discount": deal["discount"],
             "shipping": deal["shipping"],
-            "link": deal["link"],
+            "link": link,
+            "has_product": True,
         }
 
     m = _PRICE_RE.search(deal["title"])
@@ -79,7 +75,8 @@ def _coupang_fields(deal):
         "price": f"{m.group(1)}원" if m else "",
         "discount": deal["discount"],
         "shipping": shipping,
-        "link": deal["link"],
+        "link": link,
+        "has_product": has_product,
     }
 
 
@@ -99,7 +96,7 @@ def _coupang_block(deal):
         lines.append(f"* 배송: {f['shipping']}")
     link = _safe_url(f["link"])
     if link:
-        label = "쿠팡 링크" if deal["source"] == "쿠팡" else "링크(원문)"
+        label = "상품 링크" if f["has_product"] else "링크(원문 게시글)"
         lines.append(f"* {label}: {link}")
     for field in _COUPANG_FILL:
         lines.append(f"* {field}: (작성 필요)")
@@ -167,8 +164,8 @@ def build_draft_material(deals):
     if not deals:
         return "<p>오늘은 쓸만한 생활 할인정보를 못 찾았어요.</p>"
 
-    coupang_deals = [d for d in deals if _is_coupang(d)]
-    other_deals = [d for d in deals if not _is_coupang(d)]
+    coupang_deals = [d for d in deals if is_coupang_related(d)]
+    other_deals = [d for d in deals if not is_coupang_related(d)]
 
     parts = []
 

@@ -20,6 +20,7 @@
 
 import hashlib
 import hmac
+import json
 import os
 from datetime import datetime, timezone
 
@@ -31,6 +32,7 @@ DOMAIN = "https://api-gateway.coupang.com"
 PREFIX = "/v2/providers/affiliate_open_api/apis/openapi/v1"
 GOLDBOX_PATH = f"{PREFIX}/products/goldbox"
 SEARCH_PATH = f"{PREFIX}/products/search"
+DEEPLINK_PATH = f"{PREFIX}/deeplink"
 
 
 def _keys():
@@ -64,6 +66,38 @@ def _get(path, query=""):
     resp = requests.get(url, headers=headers, timeout=TIMEOUT)
     resp.raise_for_status()
     return resp.json()
+
+
+def to_deeplinks(urls):
+    """쿠팡 상품 URL 리스트 → {원본URL: 제휴(단축)링크} 매핑.
+    키가 없거나 실패하면 빈 dict."""
+    urls = [u for u in urls if u]
+    if not urls or not has_keys():
+        return {}
+    headers = {
+        "Authorization": _authorization("POST", DEEPLINK_PATH),
+        "Content-Type": "application/json",
+    }
+    try:
+        resp = requests.post(
+            DOMAIN + DEEPLINK_PATH,
+            headers=headers,
+            data=json.dumps({"coupangUrls": urls}),
+            timeout=TIMEOUT,
+        )
+        resp.raise_for_status()
+        rows = resp.json().get("data") or []
+    except (requests.RequestException, ValueError) as e:
+        print(f"⚠️ 쿠팡 딥링크 변환 실패: {e}")
+        return {}
+
+    out = {}
+    for row in rows:
+        original = row.get("originalUrl")
+        short = row.get("shortenUrl") or row.get("landingUrl")
+        if original and short:
+            out[original] = short
+    return out
 
 
 def _rows(payload):
