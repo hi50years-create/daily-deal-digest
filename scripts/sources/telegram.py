@@ -30,7 +30,7 @@ from .common import HEADERS, TIMEOUT, is_recent, make_deal
 
 DEFAULT_CHANNELS = ["hotdeal_kr"]
 PREVIEW_URL = "https://t.me/s/{channel}"
-MAX_PAGES = 4  # 채널당 최대 페이지 수 (페이지당 ~20개)
+MAX_PAGES = 6  # 채널당 최대 페이지 수 (페이지당 ~20개)
 
 _SOURCE_IN_PAREN = re.compile(r"[\(（]([^)）]+)[\)）]")
 

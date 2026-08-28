@@ -266,7 +266,12 @@ def filter_lifestyle_deals(deals):
     # 추천수를 주는 소스(클리앙 등)만 MIN_RECOMMEND 미달을 제외한다.
     # RSS·텔레그램은 추천수가 없어(recommend=0) 그대로 둔다.
     kept = [d for d in filtered if d["recommend"] == 0 or d["recommend"] >= MIN_RECOMMEND]
-    kept.sort(key=lambda d: d["recommend"], reverse=True)
+    # 결정적 정렬: 추천수 → 최신 → 제목 (같은 입력이면 같은 순서가 나오도록)
+    kept.sort(key=lambda d: (
+        -d["recommend"],
+        -(d["date"].toordinal() if d["date"] else 0),
+        d["title"],
+    ))
     return kept
 
 
@@ -285,6 +290,8 @@ def filter_commerce_deals(deals):
             continue
         if d["board"].startswith("검색:") or has_lifestyle(d["title"]):
             kept.append(d)
+    # 결정적 정렬: 골드박스 먼저, 그다음 board/제목 순
+    kept.sort(key=lambda d: (not d["board"].startswith("골드"), d["board"], d["title"]))
     return kept
 
 
