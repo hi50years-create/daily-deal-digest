@@ -2,7 +2,9 @@
 텔레그램 핫딜 채널 — 웹 미리보기(t.me/s/<채널>) 스크래핑.
 
 로그인·API 키·세션이 전혀 필요 없다. 텔레그램이 공개 채널마다 제공하는
-https://t.me/s/<채널명> 미리보기 페이지에서 최근 메시지(약 20개)를 읽는다.
+https://t.me/s/<채널명> 미리보기 페이지에서 최근 메시지를 읽는다.
+한 페이지에 20개만 나와서, ?before=<메시지ID> 로 이전 페이지를 몇 번 더 넘겨
+최근 몇 시간치를 확보한다 (집계 채널은 글이 빨리 밀려서 필요함).
 
 기본 채널 hotdeal_kr 은 "한국 커뮤니티 핫딜 모아보기" — 뽐뿌·루리웹·클리앙·
 퀘이사존·아카라이브·zod 등 여러 곳을 1분 단위로 모아 재전송하는 집계 채널이다.
@@ -28,8 +30,17 @@ from .common import HEADERS, TIMEOUT, is_recent, make_deal
 
 DEFAULT_CHANNELS = ["hotdeal_kr"]
 PREVIEW_URL = "https://t.me/s/{channel}"
+MAX_PAGES = 4  # 채널당 최대 페이지 수 (페이지당 ~20개)
 
 _SOURCE_IN_PAREN = re.compile(r"[\(（]([^)）]+)[\)）]")
+
+
+def _message_id(msg):
+    """data-post="channel/12345" 에서 메시지 번호(12345)를 뽑는다."""
+    try:
+        return int(msg.get("data-post", "").split("/")[-1])
+    except (ValueError, IndexError):
+        return None
 
 
 def _channels():
@@ -77,20 +88,42 @@ def _parse_message(msg):
     )
 
 
+def _fetch_channel(channel):
+    base = PREVIEW_URL.format(channel=quote(channel, safe=""))
+    deals = []
+    before = None
+    for _ in range(MAX_PAGES):
+        url = f"{base}?before={before}" if before else base
+        resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+        resp.raise_for_status()
+        msgs = BeautifulSoup(resp.text, "html.parser").select(".tgme_widget_message")
+        if not msgs:
+            break
+
+        ids = []
+        hit_old = False
+        for msg in msgs:
+            mid = _message_id(msg)
+            if mid is not None:
+                ids.append(mid)
+            deal = _parse_message(msg)
+            if not deal or not deal["link"]:
+                continue
+            if is_recent(deal):
+                deals.append(deal)
+            elif deal["date"] is not None:
+                hit_old = True  # 이 페이지에 오래된 글이 나옴 → 더 안 넘어감
+
+        if hit_old or not ids:
+            break
+        before = min(ids)
+    return deals
+
+
 def fetch():
     deals = []
     for channel in _channels():
-        resp = requests.get(
-            PREVIEW_URL.format(channel=quote(channel, safe="")),
-            headers=HEADERS, timeout=TIMEOUT,
-        )
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        for msg in soup.select(".tgme_widget_message"):
-            deal = _parse_message(msg)
-            if deal and deal["link"] and is_recent(deal):
-                deals.append(deal)
+        deals += _fetch_channel(channel)
     return deals
 
 

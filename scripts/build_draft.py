@@ -73,6 +73,41 @@ def _deal_li(deal):
     )
 
 
+_COUPANG_FILL = [
+    "주요 특징", "장점", "사용 대상", "사용 상황",
+    "구매자가 좋아할 만한 포인트", "리뷰에서 자주 언급되는 장점", "단점/주의사항",
+]
+
+
+def _coupang_block(deal):
+    """쿠팡 상품을 사용자 지정 템플릿으로 정리한다.
+    API로 얻는 값(상품명/카테고리/가격/배송/링크)은 채우고,
+    나머지(특징·장점·리뷰 등)는 '(작성 필요)'로 두어 Claude가 채우도록 한다.
+    <pre> 블록이라 그대로 복사해서 Claude 채팅에 붙여넣으면 된다."""
+    lines = ["### [상품 정보]", f"* 상품명: {deal['title']}"]
+    if deal["category"]:
+        lines.append(f"* 카테고리: {deal['category']}")
+    price = deal["price"] or "(확인 필요)"
+    if deal["discount"]:
+        price += f" ({deal['discount']} 할인)"
+    lines.append(f"* 가격: {price}")
+    if deal["shipping"]:
+        lines.append(f"* 배송: {deal['shipping']}")
+    link = _safe_url(deal["link"])
+    if link:
+        lines.append(f"* 쿠팡 링크: {link}")
+    for field in _COUPANG_FILL:
+        lines.append(f"* {field}: (작성 필요)")
+
+    body = html.escape("\n".join(lines))
+    return (
+        '<pre style="white-space:pre-wrap; word-break:break-all; background:#f6f6f6; '
+        'border:1px solid #e0e0e0; border-radius:4px; padding:10px; font-size:13px; '
+        'margin:0 0 12px;">'
+        f"{body}</pre>"
+    )
+
+
 def build_draft_material(deals):
     """할인정보 리스트를 소스별 섹션 HTML로 정리한다."""
     groups = _group_by_source(deals)
@@ -81,13 +116,20 @@ def build_draft_material(deals):
 
     parts = []
     for source in _ordered_sources(groups):
-        items = "".join(_deal_li(d) for d in groups[source])
-        parts.append(
-            f'<h3 style="margin:18px 0 6px; font-size:15px; border-bottom:1px solid #eee; padding-bottom:3px;">'
-            f"{html.escape(source)}</h3>"
-            f"<ol>{items}</ol>"
+        header = (
+            f'<h3 style="margin:18px 0 6px; font-size:15px; '
+            f'border-bottom:1px solid #eee; padding-bottom:3px;">{html.escape(source)}</h3>'
         )
         if source == "쿠팡":
-            parts.append(AFFILIATE_NOTE)
+            note = (
+                '<p style="font-size:12px; color:#888; margin:0 0 8px;">'
+                "아래 블록을 Claude 채팅에 붙여넣고 “이걸로 상품 소개 글 써줘” 하면 빈칸이 채워집니다."
+                "</p>"
+            )
+            blocks = "".join(_coupang_block(d) for d in groups[source])
+            parts.append(header + note + blocks + AFFILIATE_NOTE)
+        else:
+            items = "".join(_deal_li(d) for d in groups[source])
+            parts.append(header + f"<ol>{items}</ol>")
 
     return "\n".join(parts)

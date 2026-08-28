@@ -17,6 +17,8 @@ deal 딕셔너리 스키마 (기존 구조를 확장, 하위호환):
       "discount": str,       # 할인율 표기 예: "43%" (없으면 "")
       "image": str,          # 썸네일 URL (없으면 "")
       "is_affiliate": bool,  # 제휴 링크 여부 (쿠팡 True)
+      "category": str,       # 카테고리명 (커머스 API가 줄 때만, 없으면 "")
+      "shipping": str,       # 배송 표기 예: "로켓배송·무료배송" (없으면 "")
     }
 """
 
@@ -108,7 +110,8 @@ EXCLUDE_KEYWORDS = [
 
 
 def make_deal(title, link, source, board="", recommend=0, date=None,
-              price="", price_value=0, discount="", image="", is_affiliate=False):
+              price="", price_value=0, discount="", image="", is_affiliate=False,
+              category="", shipping=""):
     """deal 딕셔너리를 기본값을 채워서 만든다. 모든 소스는 이걸 통해 딜을 생성한다."""
     return {
         "title": (title or "").strip(),
@@ -122,6 +125,8 @@ def make_deal(title, link, source, board="", recommend=0, date=None,
         "discount": discount or "",
         "image": image or "",
         "is_affiliate": bool(is_affiliate),
+        "category": category or "",
+        "shipping": shipping or "",
     }
 
 
@@ -223,40 +228,43 @@ def has_lifestyle(title):
 
 
 def filter_lifestyle_deals(deals):
-    """생활 할인정보 + 인기 있는 것만 필터링한다. (커뮤니티 소스용)
+    """생활 할인정보만 필터링한다. (커뮤니티 소스용)
 
     - 전자기기 제외
     - 생활 브랜드 키워드 포함
-    - 최근 글만
-    - 추천수 MIN_RECOMMEND 이상 (단, 소스가 추천수를 못 주면 전부 0이므로
-      그 경우엔 필터 없이 최신순으로라도 통과시킨다)
+    - 최근 글만 (RECENT_DAYS)
+    - 추천수를 주는 소스(클리앙)는 MIN_RECOMMEND 미달이면 제외.
+      추천수가 없는 소스(RSS·텔레그램)는 그대로 통과.
+    - 추천수 높은 순으로 정렬해서 반환
     """
     filtered = [
         d for d in deals
         if is_recent(d) and not has_excluded(d["title"]) and has_lifestyle(d["title"])
     ]
 
-    popular = [d for d in filtered if d["recommend"] >= MIN_RECOMMEND]
-    if popular:
-        popular.sort(key=lambda d: d["recommend"], reverse=True)
-        return popular
-
-    if filtered:
-        print(f"⚠️ 추천수 기준({MIN_RECOMMEND}) 넘는 글이 없어서 최신순으로 대체합니다.")
-    return filtered
+    # 추천수를 주는 소스(클리앙 등)만 MIN_RECOMMEND 미달을 제외한다.
+    # RSS·텔레그램은 추천수가 없어(recommend=0) 그대로 둔다.
+    kept = [d for d in filtered if d["recommend"] == 0 or d["recommend"] >= MIN_RECOMMEND]
+    kept.sort(key=lambda d: d["recommend"], reverse=True)
+    return kept
 
 
 def filter_commerce_deals(deals):
-    """커머스 특가(쿠팡 골드박스 등)용 필터.
+    """커머스 특가(쿠팡)용 필터.
 
-    골드박스는 쿠팡이 자체 지정한 특가라 관심 없는 상품(놀이공원 입장권 등)이
-    잔뜩 섞여 있다. 그래서 커뮤니티 딜과 똑같이 LIFESTYLE_KEYWORDS 에 걸리는 것만
-    통과시킨다 (전자기기는 제외). 관심 브랜드/카테고리는 그 목록에 추가하면 된다.
+    - 전자기기는 항상 제외
+    - COUPANG_KEYWORDS 로 직접 검색해 온 항목(board가 "검색:"로 시작)은
+      사용자가 이미 원한다고 밝힌 것이므로 그대로 통과
+    - 골드박스는 쿠팡이 자체 지정한 특가라 관심 없는 상품(놀이공원 입장권 등)이
+      섞여 있어서, 커뮤니티 딜과 똑같이 LIFESTYLE_KEYWORDS 에 걸리는 것만 통과
     """
-    return [
-        d for d in deals
-        if not has_excluded(d["title"]) and has_lifestyle(d["title"])
-    ]
+    kept = []
+    for d in deals:
+        if has_excluded(d["title"]):
+            continue
+        if d["board"].startswith("검색:") or has_lifestyle(d["title"]):
+            kept.append(d)
+    return kept
 
 
 def cap_per_source(deals, limit):

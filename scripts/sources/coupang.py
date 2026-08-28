@@ -84,6 +84,13 @@ def _to_deal(row, board):
     discount = ""
     if isinstance(base, (int, float)) and has_price and base > price:
         discount = f"{round((base - price) / base * 100)}%"
+
+    ship = []
+    if row.get("isRocket"):
+        ship.append("로켓배송")
+    if row.get("isFreeShipping"):
+        ship.append("무료배송")
+
     return make_deal(
         title=row.get("productName", ""),
         link=row.get("productUrl", ""),
@@ -94,6 +101,8 @@ def _to_deal(row, board):
         discount=discount,
         image=row.get("productImage", ""),
         is_affiliate=True,
+        category=row.get("categoryName", ""),
+        shipping="·".join(ship),
     )
 
 
@@ -113,7 +122,7 @@ def fetch():
     ))
     for kw in keywords:
         try:
-            payload = _get(SEARCH_PATH, query=f"keyword={requests.utils.quote(kw)}&limit=5")
+            payload = _get(SEARCH_PATH, query=f"keyword={requests.utils.quote(kw)}&limit=3")
             deals += [_to_deal(r, f"검색:{kw}") for r in _rows(payload)]
         except requests.RequestException as e:
             print(f"⚠️ 쿠팡 검색('{kw}') 실패: {e}")

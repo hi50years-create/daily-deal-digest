@@ -26,7 +26,7 @@ from scripts.sources.common import (
 SOURCES_DEFAULT = "ppomppu,ruliweb,clien,algumon,telegram"
 
 # 커뮤니티 소스는 소스별 이만큼, 커머스(쿠팡 등)는 별도 상한
-COMMUNITY_PER_SOURCE = 6
+COMMUNITY_PER_SOURCE = 8
 COMMERCE_MAX = 8
 
 
