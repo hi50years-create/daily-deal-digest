@@ -113,7 +113,9 @@ def fetch():
     deals = []
     try:
         payload = _get(GOLDBOX_PATH)
-        deals += [_to_deal(r, "골드박스") for r in _rows(payload)]
+        rows = _rows(payload)
+        deals += [_to_deal(r, "골드박스") for r in rows]
+        print(f"    (쿠팡 골드박스 {len(rows)}건)")
     except requests.RequestException as e:
         print(f"⚠️ 쿠팡 골드박스 실패: {e}")
 
@@ -123,7 +125,9 @@ def fetch():
     for kw in keywords:
         try:
             payload = _get(SEARCH_PATH, query=f"keyword={requests.utils.quote(kw)}&limit=3")
-            deals += [_to_deal(r, f"검색:{kw}") for r in _rows(payload)]
+            rows = _rows(payload)
+            deals += [_to_deal(r, f"검색:{kw}") for r in rows]
+            print(f"    (쿠팡 검색 '{kw}' {len(rows)}건, rCode={payload.get('rCode')})")
         except requests.RequestException as e:
             print(f"⚠️ 쿠팡 검색('{kw}') 실패: {e}")
 

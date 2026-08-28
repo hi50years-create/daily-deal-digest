@@ -64,8 +64,19 @@ def get_today_deals(per_source_max=COMMUNITY_PER_SOURCE):
     raw = _collect_raw()
     deals = dedupe(raw)
 
+    raw_commerce = [d for d in deals if d["is_affiliate"]]
     community = filter_lifestyle_deals([d for d in deals if not d["is_affiliate"]])
-    commerce = filter_commerce_deals([d for d in deals if d["is_affiliate"]])
+    commerce = filter_commerce_deals(raw_commerce)
+
+    boards = {}
+    for d in raw_commerce:
+        key = d["board"].split(":")[0] if d["board"] else "(없음)"
+        boards[key] = boards.get(key, 0) + 1
+    print(
+        f"  → 중복제거 후 커뮤니티 {len([d for d in deals if not d['is_affiliate']])}건 / "
+        f"커머스 {len(raw_commerce)}건({boards}), "
+        f"필터 통과: 커뮤니티 {len(community)}건 / 커머스 {len(commerce)}건"
+    )
 
     result = cap_per_source(community, per_source_max) + cap_per_source(commerce, COMMERCE_MAX)
     return result
