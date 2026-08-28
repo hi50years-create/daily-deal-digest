@@ -266,12 +266,21 @@ def is_coupang_related(deal):
     return _url_is_coupang(deal.get("product_link", "")) or _url_is_coupang(deal["link"])
 
 
+_COUPANG_TAG_RE = re.compile(r"\[\s*쿠팡\s*\]")
+
+
 def has_coupang_product(deal):
-    """'쿠팡 상품 정리' 템플릿으로 낼 만한지 (좁게 판단).
-    파트너스 API 딜이거나, 실제 쿠팡 상품 페이지 링크를 확보한 경우만."""
+    """'쿠팡 상품 정리' 템플릿으로 낼 만한지.
+    - 파트너스 API 딜
+    - 실제 쿠팡 상품 페이지 링크를 확보한 경우
+    - 제목에 '[쿠팡]' 태그가 붙은 경우 (커뮤니티에서 쇼핑몰 표기 관행;
+      '쿠팡이츠'처럼 태그 없이 본문에 섞인 건 제외됨)
+    """
     if deal["source"] == "쿠팡":
         return True
-    return _url_is_coupang(deal.get("product_link", "")) or _url_is_coupang(deal["link"])
+    if _url_is_coupang(deal.get("product_link", "")) or _url_is_coupang(deal["link"]):
+        return True
+    return _COUPANG_TAG_RE.search(deal["title"]) is not None
 
 
 def has_excluded(title):
