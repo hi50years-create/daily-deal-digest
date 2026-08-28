@@ -18,7 +18,7 @@ from scripts.sources import aliexpress, coupang
 from scripts.sources.common import (
     cap_per_source,
     dedupe,
-    exclude_electronics,
+    filter_commerce_deals,
     filter_lifestyle_deals,
 )
 
@@ -65,7 +65,7 @@ def get_today_deals(per_source_max=COMMUNITY_PER_SOURCE):
     deals = dedupe(raw)
 
     community = filter_lifestyle_deals([d for d in deals if not d["is_affiliate"]])
-    commerce = exclude_electronics([d for d in deals if d["is_affiliate"]])
+    commerce = filter_commerce_deals([d for d in deals if d["is_affiliate"]])
 
     result = cap_per_source(community, per_source_max) + cap_per_source(commerce, COMMERCE_MAX)
     return result

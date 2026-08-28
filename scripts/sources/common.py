@@ -246,9 +246,17 @@ def filter_lifestyle_deals(deals):
     return filtered
 
 
-def exclude_electronics(deals):
-    """커머스 특가(쿠팡 등)용: 생활 키워드는 강제하지 않고 전자기기만 걸러낸다."""
-    return [d for d in deals if not has_excluded(d["title"])]
+def filter_commerce_deals(deals):
+    """커머스 특가(쿠팡 골드박스 등)용 필터.
+
+    골드박스는 쿠팡이 자체 지정한 특가라 관심 없는 상품(놀이공원 입장권 등)이
+    잔뜩 섞여 있다. 그래서 커뮤니티 딜과 똑같이 LIFESTYLE_KEYWORDS 에 걸리는 것만
+    통과시킨다 (전자기기는 제외). 관심 브랜드/카테고리는 그 목록에 추가하면 된다.
+    """
+    return [
+        d for d in deals
+        if not has_excluded(d["title"]) and has_lifestyle(d["title"])
+    ]
 
 
 def cap_per_source(deals, limit):
