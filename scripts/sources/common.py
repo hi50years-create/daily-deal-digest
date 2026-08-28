@@ -24,7 +24,7 @@ deal 딕셔너리 스키마 (기존 구조를 확장, 하위호환):
 
 import re
 from datetime import datetime, timedelta
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 # 공용 User-Agent (일부 사이트는 UA 없으면 차단함)
 HEADERS = {
@@ -165,15 +165,33 @@ def _normalize_title(title):
     return t.lower()
 
 
+# 링크 비교 시 무시할 쿼리 파라미터 (추적/정렬/페이지네이션용)
+_VOLATILE_PARAMS = {
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "traceid", "spec", "addtag", "ctag", "lptag", "src", "ref", "from",
+    "page", "po", "od", "groupcd", "sort",
+}
+
+
 def _link_key(link):
-    """중복 판단용 링크 키: host + path (쿼리스트링/프로토콜/모바일 서브도메인 무시)."""
+    """중복 판단용 링크 키: host + path + (의미 있는) 쿼리.
+
+    뽐뿌처럼 글 번호가 쿼리(?id=..&no=..)에 있는 사이트가 있어서 쿼리를
+    통째로 버리면 안 된다. 대신 추적/정렬용 파라미터만 걸러낸다.
+    """
     try:
         p = urlparse(link)
         host = p.netloc.lower()
         for prefix in ("www.", "m.", "mobile."):
             if host.startswith(prefix):
                 host = host[len(prefix):]
-        return f"{host}{p.path.rstrip('/')}"
+        params = sorted(
+            (k, v) for k, v in parse_qsl(p.query)
+            if k.lower() not in _VOLATILE_PARAMS
+        )
+        q = "&".join(f"{k}={v}" for k, v in params)
+        path = p.path.rstrip("/")
+        return f"{host}{path}?{q}" if q else f"{host}{path}"
     except ValueError:
         return link
 
@@ -181,13 +199,16 @@ def _link_key(link):
 def dedupe(deals):
     """제목 정규화 + 링크(host+path) 두 기준으로 중복 딜을 제거한다.
     먼저 온 것을 남긴다(소스 등록 순서가 우선순위). 단, 나중 것이 추천수가
-    더 높거나 가격/이미지 정보가 있으면 그 필드를 채워 넣는다."""
+    더 높거나 가격/이미지 정보가 있으면 그 필드를 채워 넣는다.
+
+    커머스(제휴) 딜은 링크가 불투명한 리디렉션이라 링크 기준 중복은 쓰지 않고
+    제목 정규화만으로 판단한다."""
     seen_title = {}
     seen_link = {}
     result = []
     for d in deals:
         tkey = _normalize_title(d["title"])
-        lkey = _link_key(d["link"]) if d["link"] else None
+        lkey = None if d["is_affiliate"] else (_link_key(d["link"]) if d["link"] else None)
 
         dup = None
         if tkey and tkey in seen_title:
