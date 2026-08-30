@@ -111,13 +111,11 @@ def _rows(payload):
 
 
 def _to_deal(row, board):
+    # 파트너스 API는 productPrice 하나만 준다. basePrice/할인율/쿠폰가/와우가는 없음.
+    # 그래서 이 값은 '참고가'이고 실제 구매가와 다를 수 있다 (build_draft에서 그렇게 표기).
     price = row.get("productPrice")
     has_price = isinstance(price, (int, float))
     price_str = f"{int(price):,}원" if has_price else ""
-    base = row.get("basePrice")
-    discount = ""
-    if isinstance(base, (int, float)) and has_price and base > price:
-        discount = f"{round((base - price) / base * 100)}%"
 
     ship = []
     if row.get("isRocket"):
@@ -132,7 +130,6 @@ def _to_deal(row, board):
         board=board,
         price=price_str,
         price_value=int(price) if has_price else 0,
-        discount=discount,
         image=row.get("productImage", ""),
         is_affiliate=True,
         category=row.get("categoryName", ""),
@@ -148,8 +145,6 @@ def fetch():
     try:
         payload = _get(GOLDBOX_PATH)
         rows = _rows(payload)
-        if rows:
-            print(f"    (쿠팡 응답 필드: {sorted(rows[0].keys())})")
         deals += [_to_deal(r, "골드박스") for r in rows]
         print(f"    (쿠팡 골드박스 {len(rows)}건)")
     except requests.RequestException as e:

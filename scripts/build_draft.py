@@ -61,7 +61,8 @@ def _coupang_fields(deal):
             "name": deal["title"],
             "category": deal["category"],
             "price": deal["price"],
-            "discount": deal["discount"],
+            # 파트너스 API 가격은 쿠폰·와우가·실시간 변동 미반영이라 참고용
+            "price_label": "가격(쿠팡 API 참고가 · 쿠폰/와우가 미반영, 링크에서 확인)",
             "shipping": deal["shipping"],
             "link": link,
             "has_product": True,
@@ -73,7 +74,7 @@ def _coupang_fields(deal):
         "name": _clean_product_name(deal["title"]),
         "category": "",
         "price": f"{m.group(1)}원" if m else "",
-        "discount": deal["discount"],
+        "price_label": "가격(딜 등록 시점 · 링크에서 확인)",
         "shipping": shipping,
         "link": link,
         "has_product": has_product,
@@ -88,10 +89,7 @@ def _coupang_block(deal):
     lines = ["### [상품 정보]", f"* 상품명: {f['name']}"]
     if f["category"]:
         lines.append(f"* 카테고리: {f['category']}")
-    price = f["price"] or "(확인 필요)"
-    if f["discount"]:
-        price += f" ({f['discount']} 할인)"
-    lines.append(f"* 가격: {price}")
+    lines.append(f"* {f['price_label']}: {f['price'] or '(확인 필요)'}")
     if f["shipping"]:
         lines.append(f"* 배송: {f['shipping']}")
     link = _safe_url(f["link"])
