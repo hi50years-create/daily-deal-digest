@@ -61,8 +61,7 @@ def _coupang_fields(deal):
             "name": deal["title"],
             "category": deal["category"],
             "price": deal["price"],
-            # 파트너스 API 가격은 쿠폰·와우가·실시간 변동 미반영이라 참고용
-            "price_label": "가격(쿠팡 API 참고가 · 쿠폰/와우가 미반영, 링크에서 확인)",
+            "price_label": "가격(쿠팡 API 참고가)",
             "shipping": deal["shipping"],
             "link": link,
             "has_product": True,
@@ -74,7 +73,7 @@ def _coupang_fields(deal):
         "name": _clean_product_name(deal["title"]),
         "category": "",
         "price": f"{m.group(1)}원" if m else "",
-        "price_label": "가격(딜 등록 시점 · 링크에서 확인)",
+        "price_label": "가격(딜 등록가)",
         "shipping": shipping,
         "link": link,
         "has_product": has_product,
@@ -180,7 +179,10 @@ def build_draft_material(deals):
         note = (
             '<p style="font-size:12px; color:#888; margin:0 0 8px;">'
             "각 블록을 통째로 복사해 Claude 채팅에 붙여넣고 "
-            "“이걸로 상품 소개 글 써줘” 하면 빈칸이 채워집니다."
+            "“이걸로 상품 소개 글 써줘” 하면 빈칸이 채워집니다.<br>"
+            "<b>가격은 전부 참고용입니다.</b> 쿠팡 API/딜 등록 시점 값이라 "
+            "쿠폰·와우가·시세 변동이 반영 안 돼 실제 결제가와 다를 수 있어요 — "
+            "글 쓰기 전 반드시 링크에서 확인하세요."
             "</p>"
         )
         blocks = "".join(_coupang_block(d) for d in coupang_deals)
