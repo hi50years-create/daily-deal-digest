@@ -24,6 +24,20 @@ _COUPANG_FILL = [
 _LEAD_TAG_RE = re.compile(r"^(?:\s*[\[\(（【][^\]\)）】]*[\]\)）】]\s*)+")
 _TRAIL_PAREN_RE = re.compile(r"\s*[\(（][^)）]*[\)）]\s*$")
 _PRICE_RE = re.compile(r"([\d][\d,]*)\s*원")
+# 글쓴이가 적어놓은 '정가/원가' 패턴
+_ORIG_RE = re.compile(r"(?:정가|정상가|원가|기존가|정상)\s*[:은는]?\s*([\d,]{3,})\s*원?")
+_ARROW_RE = re.compile(r"([\d,]{3,})\s*원?\s*(?:→|->|=>|▶|~>)\s*([\d,]{3,})\s*원")
+
+
+def _parse_original_price(title):
+    """제목에 글쓴이가 적어놓은 정가가 있으면 '3,980원' 형태로 돌려준다. 없으면 ''."""
+    m = _ORIG_RE.search(title)
+    if m:
+        return f"{m.group(1)}원"
+    m = _ARROW_RE.search(title)
+    if m:
+        return f"{m.group(1)}원"
+    return ""
 
 
 def _safe_url(url):
@@ -62,6 +76,7 @@ def _coupang_fields(deal):
             "category": deal["category"],
             "price": deal["price"],
             "price_label": "가격(쿠팡 API 참고가)",
+            "original": "",  # 쿠팡 API는 정가를 안 준다
             "shipping": deal["shipping"],
             "link": link,
             "has_product": True,
@@ -74,6 +89,7 @@ def _coupang_fields(deal):
         "category": "",
         "price": f"{m.group(1)}원" if m else "",
         "price_label": "가격(딜 등록가)",
+        "original": _parse_original_price(deal["title"]),
         "shipping": shipping,
         "link": link,
         "has_product": has_product,
@@ -88,7 +104,11 @@ def _coupang_block(deal):
     lines = ["### [상품 정보]", f"* 상품명: {f['name']}"]
     if f["category"]:
         lines.append(f"* 카테고리: {f['category']}")
+    if f["original"]:
+        lines.append(f"* 정가(글에 표기): {f['original']}")
     lines.append(f"* {f['price_label']}: {f['price'] or '(확인 필요)'}")
+    if not f["original"]:
+        lines.append("* 정가/원래가격: (링크에서 확인 — 자동 수집 불가)")
     if f["shipping"]:
         lines.append(f"* 배송: {f['shipping']}")
     link = _safe_url(f["link"])
