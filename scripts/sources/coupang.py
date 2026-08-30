@@ -148,6 +148,8 @@ def fetch():
     try:
         payload = _get(GOLDBOX_PATH)
         rows = _rows(payload)
+        if rows:
+            print(f"    (쿠팡 응답 필드: {sorted(rows[0].keys())})")
         deals += [_to_deal(r, "골드박스") for r in rows]
         print(f"    (쿠팡 골드박스 {len(rows)}건)")
     except requests.RequestException as e:
