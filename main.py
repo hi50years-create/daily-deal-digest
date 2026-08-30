@@ -12,6 +12,12 @@ def main():
         print("오늘은 쓸만한 생활 할인정보를 못 찾았어요. 메일 안 보내고 종료합니다.")
         return
 
+    # 나중에 "그 딜 링크가 뭐였지?" 확인용으로 최종 목록을 로그에 남긴다.
+    print("── 이번 발송 목록 ──")
+    for d in deals:
+        link = d["product_link"] or d["link"]
+        print(f"  [{d['source']}] {d['title']}  →  {link}")
+
     html_content = build_draft_material(deals)
 
     # DRY_RUN=1 이면 메일을 보내지 않고 HTML만 출력한다 (테스트용).
